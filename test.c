@@ -98,7 +98,7 @@ int test_read(void)
 
 	sg_init_one(&sg, ptr, sizeof(buf));
 
-	n2 = mpi_read_raw_from_sgl(&sg);
+	n2 = mpi_read_raw_from_sgl(&sg, sizeof(buf));
 	if (!n2) {
 		pr_err("mpi_read_raw_from_sgl single failed\n");
 		goto free;
@@ -114,9 +114,9 @@ int test_read(void)
 	sg_set_buf(sg_tab + 3, ptr + 16, 5);
 	sg_set_buf(sg_tab + 4, ptr + 21, 15);
 	sg_set_buf(sg_tab + 5, ptr + 36, 69);
-	sg_set_buf(sg_tab + 6, ptr + 105, 5);
+	sg_set_buf(sg_tab + 6, ptr + 105, 50);
 
-	n3 = mpi_read_raw_from_sgl(sg_tab);
+	n3 = mpi_read_raw_from_sgl(sg_tab, sizeof(buf));
 	if (!n3) {
 		pr_err("mpi_read_raw_from_sgl tab failed\n");
 		goto free;
