@@ -45,6 +45,15 @@ static void dump(char *mem, unsigned int len)
 	printk("\n");
 }
 
+static unsigned int sg_len(struct scatterlist *sg)
+{
+	unsigned int len;
+
+	for (len = 0; sg; sg = sg_next(sg))
+		len += sg->length;
+	return len;
+}
+
 static void dump_mpi(MPI m)
 {
 	unsigned int size = mpi_get_size(m), len;
@@ -75,10 +84,11 @@ static void dump_sg(struct scatterlist *sg)
 
 int test_read(void)
 {
-	MPI n1, n2, n3;
+	MPI n1, n2, n3, n4, n5;
 	struct scatterlist sg;
 	struct scatterlist sg_tab[7];
-	int ret = -ENOMEM;
+	struct scatterlist *sg_tab2 = NULL;
+	int ret = -ENOMEM, i;
 	u8 *ptr = kmalloc(sizeof(buf), GFP_KERNEL);
 
 	pr_info("test_read\n");
@@ -124,10 +134,40 @@ int test_read(void)
 	pr_info("n3:\n");
 	dump_mpi(n3);
 	mpi_free(n3);
-	kfree(ptr);
-	return 0;
 
+	sg_tab2 = kmalloc(sizeof(buf) * sizeof(*sg_tab2), GFP_KERNEL);
+	if (!sg_tab2)
+		goto free;
+
+	sg_init_table(sg_tab2, sizeof(buf));
+	for (i = 0; i < sizeof(buf); i++)
+		sg_set_buf(sg_tab2 + i, ptr + i, 1);
+
+	n4 = mpi_read_raw_from_sgl(sg_tab2, sizeof(buf));
+	if (!n4) {
+		pr_err("mpi_read_raw_from_sgl tab failed\n");
+		goto free;
+	}
+	pr_info("one byte per sgl - n4:\n");
+	dump_mpi(n4);
+	mpi_free(n4);
+
+	*(ptr + 3) = 0x1;
+	sg_init_table(sg_tab2, sizeof(buf));
+	for (i = 0; i < sizeof(buf); i++)
+		sg_set_buf(sg_tab2 + i, ptr + i, 1);
+
+	n5 = mpi_read_raw_from_sgl(sg_tab2, sizeof(buf));
+	if (!n5) {
+		pr_err("mpi_read_raw_from_sgl tab failed\n");
+		goto free;
+	}
+	pr_info("one byte per sgl with o leading zeros - n5:\n");
+	dump_mpi(n5);
+	mpi_free(n5);
+	ret = 0;
 free:
+	kfree(sg_tab2);
 	kfree(ptr);
 	return ret;
 }
@@ -136,7 +176,7 @@ int test_write(void)
 {
 	MPI n;
 	struct scatterlist sg_tab[7];
-	int ret = -ENOMEM, nbytes;
+	int ret = -ENOMEM, nbytes = sizeof(buf);
 	u8 *ptr = kzalloc(sizeof(buf), GFP_KERNEL);
 
 	pr_info("test_write\n");
