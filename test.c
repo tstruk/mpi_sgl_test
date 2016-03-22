@@ -54,6 +54,19 @@ static unsigned int sg_len(struct scatterlist *sg)
 	return len;
 }
 
+static void_dump_mpi_raw(MPI m)
+{
+	int x, y;
+
+	for (y = a->nlimbs - 1; x > 0; x--) {
+		*u8 limb = &a->d[y];
+		printk("limb[%d] = ", y);
+		for (x = BYTES_PER_MPI_LIMB - 1; x > 0; x--)
+			printk("%x ", *(limb + x));
+	}
+	printk(".\n");
+}
+
 static void dump_mpi(MPI m)
 {
 	unsigned int size = mpi_get_size(m), len;
@@ -124,7 +137,7 @@ int test_read(void)
 	sg_set_buf(sg_tab + 3, ptr + 16, 5);
 	sg_set_buf(sg_tab + 4, ptr + 21, 15);
 	sg_set_buf(sg_tab + 5, ptr + 36, 69);
-	sg_set_buf(sg_tab + 6, ptr + 105, 50);
+	sg_set_buf(sg_tab + 6, ptr + 105, 5);
 
 	n3 = mpi_read_raw_from_sgl(sg_tab, sizeof(buf));
 	if (!n3) {
@@ -162,7 +175,7 @@ int test_read(void)
 		pr_err("mpi_read_raw_from_sgl tab failed\n");
 		goto free;
 	}
-	pr_info("one byte per sgl with o leading zeros - n5:\n");
+	pr_info("one byte per sgl with gap of zeros - n5:\n");
 	dump_mpi(n5);
 	mpi_free(n5);
 	ret = 0;
